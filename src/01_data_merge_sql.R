@@ -61,6 +61,10 @@ if (nrow(wtr.data) != 0){
     arrange(ActivityStartDate) %>%
     mutate(CharacteristicName = 'Dissolved oxygen (DO)')
   
+  dbDisconnect(con)
+  
+  if (nrow(data_pull_variable) != 0){
+
   ###
   dbDisconnect(con)
 
@@ -121,14 +125,22 @@ if (nrow(wtr.data) != 0){
     }
 
     # outlier detection
-    outlier_values              <- boxplot.stats(obs$ResultMeasureValue)$out
-    uvx                         <- match(outlier_values, obs$ResultMeasureValue)
-    obs$ResultMeasureValue[uvx] <- NA
+    if (length(unique(obs$ActivityStartDate)) > 10){
+      outlier_values              <- boxplot.stats(obs$ResultMeasureValue)$out
+      uvx                         <- match(outlier_values, obs$ResultMeasureValue)
+      obs$ResultMeasureValue[uvx] <- NA
+    }
+    
+    # remove duplicated rows
+    id_duplicated <- !duplicated(obs)
+    obs <- obs[id_duplicated, ]
 
     eg_nml <- read_nml(paste0('inst/extdata/pball_nml/pball_nml_files/pball_',lake_id,'.nml'))
 
     H <- abs(eg_nml$morphometry$H - max(eg_nml$morphometry$H)) # DEPTH
     A <- eg_nml$morphometry$A # AREA
+    
+    
 
     p.data <- c()
     for (ki in sort(unique(data$date))){
@@ -172,6 +184,8 @@ if (nrow(wtr.data) != 0){
                     max.d = max.d,
                     wind = wind,
                     airtemp = airtemp)
+    
+    if (!all(is.na(input.values$volume_hypo))){
 
     w.obs <- weigh_obs(obs,input.values = input.values, H, A)
     obs_long <- w.obs[[1]]
@@ -294,7 +308,8 @@ if (nrow(wtr.data) != 0){
     }
 
 
-
+    }
+  }
 } else {
   print('lake_id is probably wrong or non-existent in the database.')
   dbDisconnect(con)

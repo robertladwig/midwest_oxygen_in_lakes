@@ -48,5 +48,37 @@ system.time(
 )
 stopCluster(cl)
 
+# check 120018108
 
-
+#low do nhdhr_120019016 
+# problem: nhdhr_121622760
+# 
+# [1] "Running nhdhr_{4EA76133-68CD-4DA8-A82B-0B568CD9C9B2}"
+# [1] "lake_id is probably wrong or non-existent in the database."
+# [1] "Running nhdhr_{4F6A1C28-CFA9-45C9-B597-E2E6526275B8}"
+# [1] "lake_id is probably wrong or non-existent in the database."
+# [1] "Running nhdhr_{62B48949-8CCC-4BA3-989E-AA1FE86C363D}"
+# [1] "lake_id is probably wrong or non-existent in the database."
+# [1] "Running nhdhr_{E940A362-4076-4895-A23F-1B8CCC905DEE}"
+# [1] "lake_id is probably wrong or non-existent in the database."
+# [1] "Running nhdhr_120018007"
+# [1] "Running nhdhr_120018981"
+# [1] "Running nhdhr_121859022"
+# [1] "Running nhdhr_143396594"
+# [1] "Running nhdhr_143418891"
+# [1] "Running nhdhr_151870593"
+# [1] "Running nhdhr_152335372"
+# [1] "Running nhdhr_152517931"
+# [1] "Running nhdhr_152707734"
+# [1] "Running nhdhr_155417639"
+# [1] "Running nhdhr_155635994"
+# [1] "Running nhdhr_155636695"
+# [1] "Running nhdhr_155637270"
+# [1] "Running nhdhr_155637595"
+# [1] "Running nhdhr_34122432"
+# [1] "Running nhdhr_34131807"
+# [1] "Running nhdhr_69886228"
+# [1] "Running nhdhr_72863203"
+# [1] "Running nhdhr_74926805"
+# [1] "Running nhdhr_91594833"
+# [1] "Start optimization"

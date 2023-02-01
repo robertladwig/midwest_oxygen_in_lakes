@@ -1,3 +1,7 @@
 inst/extdata/HydroLAKES
 inst/extdata/HydroLAKES_polys_v10_shp
+inst/extdata/LAGOS
+inst/extdata/LTS
 sensitive
+processed_data/landuse.csv
+processed_data/trophic.csv
