@@ -121,6 +121,7 @@
         rect.hclust(hc, k=2,border='red')#k=7
         indMycl = unique(groups)
         dataGroups = list()
+        dataGroups_var = list()
         idz = as.numeric(table(groups))
         for (i in 1:length(indMycl)){
           idy = which(groups == i)
@@ -128,6 +129,7 @@
 
           data.df = as.data.frame(do.call(cbind, data))
           dataGroups[[i]] = apply(data.df,1, mean)
+          dataGroups_var[[i]] = apply(data.df,1, sd)
 
           data.long = data.df %>%
             mutate(x = 1:92) %>%
@@ -143,9 +145,13 @@
 
         df = as.data.frame(dataGroups)
         names(df) = c("Heavy consumption", "Low consumption")#c('Semi-bad','Good','Bad')#c('Semi-bad','Good','Bad')#,'Convex')
-
+        
+        df_sd = as.data.frame(dataGroups_var)
+        names(df_sd) =names(df)
+        
         nameVec = names(df)
         df$depth = seq(1,nrow(df))
+        df_sd$depth = df$depth
         table(groups)
         lakeinv <- nameVec[unique(which(table(groups) > 0))]# >5
 
@@ -156,7 +162,24 @@
           dplyr::select(lakeinv, depth) %>%
           pivot_longer(lakeinv) %>%
           mutate(name = fct_relevel(name,  "Heavy consumption", "Low consumption"))
+        
+        df_sd_upper <- df + df_sd
+        df_sd_upper$depth = df$depth
+        # Pivot wide for plotting
+        df.upper = df_sd_upper %>%
+          dplyr::select(lakeinv, depth) %>%
+          pivot_longer(lakeinv) %>%
+          mutate(name = fct_relevel(name,  "Heavy consumption", "Low consumption"))
 
+        
+        df_sd_lower <- df - df_sd
+        df_sd_lower$depth = df$depth
+        # Pivot wide for plotting
+        df.lower = df_sd_lower %>%
+          dplyr::select(lakeinv, depth) %>%
+          pivot_longer(lakeinv) %>%
+          mutate(name = fct_relevel(name,  "Heavy consumption", "Low consumption"))
+        
         # Cluster lables
         cluster.labels = NA
 
@@ -169,6 +192,8 @@
         # Cluster plotting
         g.cluster = ggplot(df.long) +
           geom_line(aes(depth, value, color = name)) +
+          geom_line(data = df.upper, aes(depth, value, color = name), linetype = 'dashed') +
+          geom_line(data = df.lower, aes(depth, value, color = name), linetype = 'dashed') +
           scale_color_manual(values = c('red4','lightblue1','gold','red1','red4'), name = 'Cluster',
                              labels = cluster.labels) +
           xlab('Stratification duration [%]') +
