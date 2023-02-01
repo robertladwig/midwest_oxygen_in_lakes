@@ -38,11 +38,13 @@ data <- read_csv( 'processed_data/data_jan30.csv', col_names = T)
 
 developed_interp <- c()
 cultivated_interp <- c()
+forest_interp <- c()
 for (lakeid in unique(data$Hylak_id)){
   df <- data %>% filter(Hylak_id == lakeid)
 
   id.na_dev <- which(!is.na(df$developed))
   id.na_cul <- which(!is.na(df$cultivated))
+  id.na_for <- which(!is.na(df$forest))
 
   if (length(id.na_dev) != 0){
     interpolated_data_dev <- approx(df$year[id.na_dev], df$developed[id.na_dev], df$year, rule = 2, method = 'constant')$y
@@ -54,13 +56,20 @@ for (lakeid in unique(data$Hylak_id)){
   } else {
     interpolated_data_cul <-  rep(0, length(df$year))
   }
+  if (length(id.na_for) != 0){
+    interpolated_data_for <- approx(df$year[id.na_for], df$forest[id.na_for], df$year, rule = 2, method = 'constant')$y
+  } else {
+    interpolated_data_for <-  rep(0, length(df$year))
+  }
 
 
   developed_interp <- append(developed_interp, interpolated_data_dev)
   cultivated_interp <- append(cultivated_interp, interpolated_data_cul)
+  forest_interp <- append(forest_interp, interpolated_data_for)
 }
 
 data$human_impact <- developed_interp + cultivated_interp
+data$forest_impact <- forest_interp
 
 idx <- which(is.na(data$ct))
 data <- data[-idx, ]
@@ -71,9 +80,11 @@ data_new <- data %>%
          depth = log10(depth),
          RT = log10(Res_time),
          WshA = (Wshd_area),
-         area = log10(area)) %>%
+         area = log10(area),
+         Dis_avg = log10(Dis_avg),
+         Depth_avg = log10(Depth_avg)) %>%
   select(ct, human_impact, area ,depth,
-            eutro ,RT)
+            eutro ,RT, oligo, Dis_avg, Depth_avg, dys, forest_impact)
 data_new <- na.omit(data_new)
 
 
@@ -127,7 +138,7 @@ ggsave(file = 'figs/Figure2.png', fig2,  dpi = 600, width =13, height = 8)
 
 
 models_exhaust <- glmulti(ct ~ human_impact + area + (depth) +
-          eutro + RT,
+          eutro + RT + oligo + Dis_avg+ Depth_avg+ dys+ forest_impact,
         data   = data_new,
         # crit   = aicc,       # AICC corrected AIC for small samples
         level  = 1,          # 2 with interactions, 1 without
@@ -148,7 +159,7 @@ plot(models_exhaust)
 plot(models_exhaust, type = "s")
 
 
-model_averaged <- model.avg(object = models_exhaust@objects[c(1:2)])
+model_averaged <- model.avg(object = models_exhaust@objects[c(1:3)])
 # model_averaged <- models_exhaust@objects[c(1)]
 
 # predicted data
@@ -167,44 +178,82 @@ data_new = data_new %>%
 summary(data_new$flag)
 
 
-landuse_plot_flag <- ggplot(data_new) +
+landuse_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
   geom_histogram(aes(human_impact,  fill = flag, group = flag), alpha = 0.3, position="identity") +
   scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
   xlab('Human impact: developed + cultivated') +
   ylab('Density') +
   theme_minimal(base_size = 15)
 
-area_plot_flag <- ggplot(data_new) +
+area_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
   geom_histogram(aes(area,  fill = flag, group = flag), alpha = 0.3, position="identity") +
   scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
   xlab('log Area') +
   ylab('Density') +
   theme_minimal(base_size = 15)
 
-depth_plot_flag <- ggplot(data_new) +
+depth_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
   geom_histogram(aes(depth,  fill = flag, group = flag), alpha = 0.3, position="identity") +
   scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
   xlab('log Depth') +
   ylab('Density') +
   theme_minimal(base_size = 15)
 
-RT_plot_flag <- ggplot(data_new) +
+RT_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
   geom_histogram(aes(RT, fill = flag, group = flag), alpha = 0.3, position="identity") +
   scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
   xlab('log Residence time') +
   ylab('Density') +
   theme_minimal(base_size = 15)
 
-eutro_plot_flag <- ggplot(data_new) +
+eutro_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
   geom_histogram(aes(eutro, fill = flag, group = flag), alpha = 0.3, position="identity") +
   scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
   xlab('Eutrophic probability') +
   ylab('Density') +
   theme_minimal(base_size = 15)
 
-fig4 <- landuse_plot_flag +area_plot_flag +depth_plot_flag +eutro_plot_flag +RT_plot_flag+ plot_layout(guides = 'collect')  +
+oligo_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
+  geom_histogram(aes(oligo, fill = flag, group = flag), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+  xlab('Oligotrophic probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+dys_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
+  geom_histogram(aes(dys, fill = flag, group = flag), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+  xlab('Dystrophic probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+dis_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
+  geom_histogram(aes(Dis_avg, fill = flag, group = flag), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+  xlab('log Discharge probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+avgdep_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
+  geom_histogram(aes(Depth_avg, fill = flag, group = flag), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+  xlab('log Avg. Depth probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+forest_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
+  geom_histogram(aes(forest_impact, fill = flag, group = flag), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+  xlab('Forest probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+#Dis_avg+ Depth_avg+ dys+ forest_impact
+
+fig4 <- landuse_plot_flag +area_plot_flag +depth_plot_flag +eutro_plot_flag+ oligo_plot_flag + dys_plot_flag +
+  RT_plot_flag+ dis_plot_flag + avgdep_plot_flag + forest_plot_flag+ plot_layout(guides = 'collect')  +
   plot_annotation(tag_levels = 'A') & theme(legend.position = 'bottom')
-ggsave(file = 'figs/Figure4.png', fig4,  dpi = 600, width =13, height = 8)
+ggsave(file = 'figs/Figure4_lowDO.png', fig4,  dpi = 600, width =13, height = 8)
 
 
 ### permutation analysis
