@@ -33,16 +33,7 @@ library(multiROC)
 data <- read_csv( 'processed_data/data_jan30.csv', col_names = T)
 
 
-## get model performance
-all.dne <- list.files('metabolism_model/')
-all.dne_all <- all.dne[grepl('nhdhr', all.dne)]
 
-info.df <- c()
-for (idx in all.dne_all){
-  if (file.exists(paste0('metabolism_model/',idx,'/lakeinfo.txt'))){
-    info.df <- rbind(info.df,read.csv(paste0('metabolism_model/',idx,'/lakeinfo.txt')))
-  }
-}
 
 
 developed_interp <- c()
