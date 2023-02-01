@@ -851,6 +851,24 @@ odem_static_v2 <-function(input.values,
   outlier_hypo <- boxplot.stats(o2_data$o2_hyp)$out
 
   fit <- sqrt(mean((obs-mod)**2,na.rm = TRUE)) + length(outlier_hypo) * 1
+  
+  if (is.na(fit)){
+    idx.obs <- match(as.Date(obs_weigh_df$Date),as.Date(input.values$datetime))
+    
+    obs <- cbind(as.numeric(obs_weigh_df$Tot[!is.na(idx.obs)]))
+    mod <- cbind(o2_data$o2_tot[idx.obs[!is.na(idx.obs)]]/1000)
+    
+    outlier_hypo <- boxplot.stats(o2_data$o2_hyp)$out
+    
+    fit <- sqrt(mean((obs-mod)**2,na.rm = TRUE)) + length(outlier_hypo) * 1
+  }
+  
+  idx.obs <- match(as.Date(obs_weigh_df$Date),as.Date(input.values$datetime))
+  
+  obs <- cbind(as.numeric(obs_weigh_df$Epi[!is.na(idx.obs)]),
+               as.numeric(obs_weigh_df$Hyp[!is.na(idx.obs)]))
+  mod <- cbind(o2_data$o2_epi[idx.obs[!is.na(idx.obs)]]/1000,
+               o2_data$o2_hyp[idx.obs[!is.na(idx.obs)]]/1000)
 
   o2_data$obs_tot <- NaN
   o2_data$obs_epi <- NaN
