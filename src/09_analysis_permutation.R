@@ -76,6 +76,7 @@ data <- data[-idx, ]
 
 
 data_new <- data %>%
+  mutate(Osgood = Depth_avg/ sqrt(area)) %>%
   mutate(ct = as.numeric(as.factor(data$ct)) - 1,
          depth = log10(depth),
          RT = log10(Res_time),
@@ -84,11 +85,12 @@ data_new <- data %>%
          Dis_avg = log10(Dis_avg),
          Depth_avg = log10(Depth_avg)) %>%
   select(ct, human_impact, area ,depth,
-            eutro ,RT, oligo, Dis_avg, Depth_avg, dys, forest_impact)
+            eutro ,RT, oligo, Dis_avg, Depth_avg, dys, forest_impact,Osgood)
 data_new <- na.omit(data_new)
 
 
 data_plot <- data %>%
+  mutate(Osgood = Depth_avg/ sqrt(area)) %>%
   mutate(ct = as.numeric(as.factor(data$ct)) - 1,
          area = log10(area),
          depth = log10(depth),
@@ -132,13 +134,51 @@ eutro_plot <- ggplot(data_plot) +
   ylab('Density') +
   theme_minimal(base_size = 15)
 
-fig2 <- landuse_plot +area_plot +depth_plot +eutro_plot +RT_plot + plot_layout(guides = 'collect')  +
+
+oligo_plot <- ggplot(data_plot) +
+  geom_density(aes(oligo, fill = ct, group = ct), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c('red4','lightblue1'), name = 'Cluster') +
+  xlab('Oligotrophic probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+dys_plot <- ggplot(data_plot) +
+  geom_density(aes(dys, fill = ct, group = ct), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c('red4','lightblue1'), name = 'Cluster') +
+  xlab('Dystrophic probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+dis_plot <- ggplot(data_plot) +
+  geom_density(aes(Dis_avg, fill = ct, group = ct), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c('red4','lightblue1'), name = 'Cluster') +
+  xlab('Avg. discharge probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+forest_plot <- ggplot(data_plot) +
+  geom_density(aes(forest_impact, fill = ct, group = ct), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c('red4','lightblue1'), name = 'Cluster') +
+  xlab('Forest impact probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+osgood_plot <- ggplot(data_plot) +
+  geom_density(aes(Osgood, fill = ct, group = ct), alpha = 0.3, position="identity") +
+  scale_fill_manual(values = c('red4','lightblue1'), name = 'Cluster') +
+  xlab('Osgood probability') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
+
+fig2 <- landuse_plot +depth_plot +eutro_plot + dys_plot +oligo_plot +RT_plot + 
+  forest_plot + osgood_plot + plot_layout(guides = 'collect')  +
   plot_annotation(tag_levels = 'A') & theme(legend.position = 'bottom')
+
 ggsave(file = 'figs/Figure2.png', fig2,  dpi = 600, width =13, height = 8)
 
 
-models_exhaust <- glmulti(ct ~ human_impact + area + (depth) +
-          eutro + RT + oligo + Dis_avg+ Depth_avg+ dys+ forest_impact,
+models_exhaust <- glmulti(ct ~ human_impact  + (depth) +
+           RT + forest_impact + Osgood, # eutro + oligo + dys+ 
         data   = data_new,
         # crit   = aicc,       # AICC corrected AIC for small samples
         level  = 1,          # 2 with interactions, 1 without
@@ -159,7 +199,7 @@ plot(models_exhaust)
 plot(models_exhaust, type = "s")
 
 
-model_averaged <- model.avg(object = models_exhaust@objects[c(1:3)])
+model_averaged <- model.avg(object = models_exhaust@objects[c(1:2)])
 # model_averaged <- models_exhaust@objects[c(1)]
 
 # predicted data
@@ -167,93 +207,113 @@ data_new$prediction <- stats::predict(model_averaged, type = "response")
 
 # create roc curve
 roc_object <- pROC::roc(data_new$ct, data_new$prediction)
+print(roc_object)
 
 table <- table(Reality = data_new$ct,
                Prediction = ifelse(as.numeric(data_new$prediction) <= 0.50, 0, 1) )
 (table[1,1]+table[2+2])/sum(table) * 100
+
+TP = table[1]
+TN = table[4]
+FP = table[2]
+FN = table[3]
+sensitivity = TP/ (TP + FN)
+specificity = TN / (TN + FP)
+(sensitivity + specificity) / 2
 
 data_new = data_new %>%
   mutate(prediction_ct = ifelse(as.numeric(data_new$prediction) <= 0.50, 0, 1),
          flag = ifelse(ct == prediction_ct, T, F))
 summary(data_new$flag)
 
+create_figure4 <- function(group_ct, label_ct, title_ct){
+  landuse_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(human_impact,  fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('Human impact: developed + cultivated') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
 
-landuse_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(human_impact,  fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('Human impact: developed + cultivated') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
+  area_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(area,  fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('log Area') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
 
-area_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(area,  fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('log Area') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
+  depth_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(depth,  fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('log Depth') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
+  RT_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(RT, fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('log Residence time') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
+  eutro_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(eutro, fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('Eutrophic probability') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
+  oligo_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(oligo, fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('Oligotrophic probability') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
+  dys_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(dys, fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('Dystrophic probability') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
+  dis_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(Dis_avg, fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('log Discharge probability') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
+  avgdep_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(Depth_avg, fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('log Avg. Depth probability') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
+  forest_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(forest_impact, fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('Forest probability') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
+  osgood_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(Osgood, fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('Osgood probability') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
+  #Dis_avg+ Depth_avg+ dys+ forest_impact
+  
+  fig4 <- landuse_plot_flag  +depth_plot_flag +eutro_plot_flag+ oligo_plot_flag + dys_plot_flag +
+    RT_plot_flag  + forest_plot_flag+ osgood_plot_flag +
+    plot_layout(guides = 'collect')  +
+    plot_annotation(tag_levels = 'A', title = title_ct) & theme(legend.position = 'bottom')
+  ggsave(file = paste0('figs/',label_ct), fig4,  dpi = 600, width =13, height = 8)
+}
 
-depth_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(depth,  fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('log Depth') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
-
-RT_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(RT, fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('log Residence time') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
-
-eutro_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(eutro, fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('Eutrophic probability') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
-
-oligo_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(oligo, fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('Oligotrophic probability') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
-
-dys_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(dys, fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('Dystrophic probability') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
-
-dis_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(Dis_avg, fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('log Discharge probability') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
-
-avgdep_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(Depth_avg, fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('log Avg. Depth probability') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
-
-forest_plot_flag <- ggplot(data_new %>% filter(ct == 1)) +
-  geom_histogram(aes(forest_impact, fill = flag, group = flag), alpha = 0.3, position="identity") +
-  scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
-  xlab('Forest probability') +
-  ylab('Density') +
-  theme_minimal(base_size = 15)
-
-#Dis_avg+ Depth_avg+ dys+ forest_impact
-
-fig4 <- landuse_plot_flag +area_plot_flag +depth_plot_flag +eutro_plot_flag+ oligo_plot_flag + dys_plot_flag +
-  RT_plot_flag+ dis_plot_flag + avgdep_plot_flag + forest_plot_flag+ plot_layout(guides = 'collect')  +
-  plot_annotation(tag_levels = 'A') & theme(legend.position = 'bottom')
-ggsave(file = 'figs/Figure4_lowDO.png', fig4,  dpi = 600, width =13, height = 8)
+create_figure4(1, "Figure4_lowDO.png", "Low DO consumption")
 
 
 ### permutation analysis

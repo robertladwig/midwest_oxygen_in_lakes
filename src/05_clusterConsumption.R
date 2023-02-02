@@ -253,6 +253,8 @@
         write_csv(x = types, file = 'processed_data/consumptiontype_jan30.csv', col_names = T)
         write_csv(x = morph, file = 'processed_data/morphometry.csv', col_names = T)
         write_csv(x = df.long, file = 'processed_data/cluster.csv', col_names = T)
+        write_csv(x = df.lower, file = 'processed_data/cluster_lower.csv', col_names = T)
+        write_csv(x = df.upper, file = 'processed_data/cluster_upper.csv', col_names = T)
         
         
         # 
