@@ -5,3 +5,8 @@ inst/extdata/LTS
 sensitive
 processed_data/landuse.csv
 processed_data/trophic.csv
+.Rproj.user
+^.*\.Rproj$
+^\.Rproj\.user$
+^input.*\.txt$
+*.feather
