@@ -41,7 +41,8 @@ for (i in 1:length(lakenames)){
   plots.out.list[[i]] = ggplot(rd) +
     geom_point(aes(x = o2, y = Depth), shape = 21, fill = clustercol, stroke  = 0.2) +
     geom_path(aes(x = o2, y = Depth, group = Date), linewidth = 0.2, color = clustercol) +
-    scale_y_reverse(limits = c(20,0)) +
+    # scale_y_reverse(limits = c(20,0)) +
+    scale_y_reverse() +
     xlab('o2 (mg/L)') + ylab('Depth(m)') +
     xlim(0,20) +
     # labs(title = paste0('cluster = ', ct$cluster)) +
@@ -53,4 +54,4 @@ for (i in 1:length(lakenames)){
 
 library(gridExtra)
 plots <- marrangeGrob(plots.out.list, nrow = 4, ncol = 6)
-ggsave( filename="Figs/rawDataCheck.pdf", plots, width = 12, height= 8, units="in")
+ggsave( filename="Figs/rawDataCheck_free.pdf", plots, width = 12, height= 8, units="in")

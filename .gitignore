@@ -2,9 +2,11 @@ inst/extdata/HydroLAKES
 inst/extdata/HydroLAKES_polys_v10_shp
 inst/extdata/LAGOS
 inst/extdata/LTS
+inst/extdata/WQP
 sensitive
 processed_data/landuse.csv
 processed_data/trophic.csv
+processed_data/raw_data.csv
 .Rproj.user
 ^.*\.Rproj$
 ^\.Rproj\.user$
