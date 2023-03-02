@@ -20,7 +20,8 @@ cluster2 = cluster |> filter(obs_hypo > 1) |>
 
 table(cluster2$cluster)
 
-
+idx = match(cluster2$nhdhr_id, cluster$nhdhr_id)
+cluster2$fit = cluster$fit_train[idx]
 
 lakenames = unique(cluster2$nhdhr_id)
 plots.out.list = list()
@@ -43,7 +44,8 @@ for (i in 1:length(lakenames)){
     scale_y_reverse(limits = c(20,0)) +
     xlab('o2 (mg/L)') + ylab('Depth(m)') +
     xlim(0,20) +
-    labs(title = paste0('cluster = ', ct$cluster)) +
+    # labs(title = paste0('cluster = ', ct$cluster)) +
+    labs(title = paste0(ct$fit,': ', ct$nhdhr_id)) +
     theme_bw(base_size = 7)
   
   # ggsave(plot = p1, 'figs/raw_clusters_low.pdf', width = 20, height = 20, dpi = 500)

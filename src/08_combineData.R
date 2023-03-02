@@ -8,6 +8,10 @@ library(sf)
 consumption <- read.csv('processed_data/consumptiontype_jan30.csv') %>%
   rename(nhdhr_id = lake)
 str(consumption)
+observed_datapoints <- read.csv('processed_data/observed_data.csv')  %>%
+  rename(nhdhr_id = lake)
+modeled_performance <- read.csv('processed_data/performance.csv')  %>%
+  rename(nhdhr_id = lake)
 
 landuse <- read.csv('processed_data/landuse.csv') %>%
   mutate(nhdhr_id = paste0('nhdhr_', lake_nhdid))
@@ -17,13 +21,18 @@ morphometry <- read.csv("processed_data/morphometry.csv") %>%
   rename(nhdhr_id = lake)
 hydLakes <- read_sf(dsn = "inst/extdata/HydroLAKES/HydroLAKES_points_v10_shp/HydroLAKES_points_v10.shp")
 
-
-df_conTro <- merge(consumption, trophic, by = c('nhdhr_id', 'year'), all = T)
+df_conData <- merge(consumption, observed_datapoints, by = c('nhdhr_id', 'year'), all = T)
+df_conDataPerf <- merge(df_conData, modeled_performance, by = c('nhdhr_id'), all = T)
+df_conTro <- merge(df_conDataPerf, trophic, by = c('nhdhr_id', 'year'), all = T) #consumption
 df_conTro_landuse <- merge(df_conTro, landuse, by = c('nhdhr_id', 'year'), all = T)
 df_conTro_landuse_morph <- merge(df_conTro_landuse, morphometry, by = c('nhdhr_id'), all = T)
 df <- merge(df_conTro_landuse_morph, hydLakes, by = c('Hylak_id'), all = T)
 
-df1 = consumption %>%
+df01 = consumption %>%
+  full_join(observed_datapoints, by = c('nhdhr_id', 'year'))
+df02 = df01 %>%
+  full_join(modeled_performance, by = c('nhdhr_id'))
+df1 = df02 %>%
   full_join(trophic, by = c('nhdhr_id', 'year'))
 df2 = df1 %>%
   full_join(landuse, by = c('nhdhr_id', 'year'))
@@ -31,6 +40,8 @@ df3 = df2 %>%
   inner_join(morphometry, by = c('nhdhr_id'))
 df4 = df3 %>%
   inner_join(hydLakes, by = c('Hylak_id'))
+nrow(df01)
+nrow(df02)
 nrow(df1)
 nrow(df2)
 nrow(df3)
@@ -42,13 +53,13 @@ nrow(df)
 nrow(as.data.frame(na.omit(df)))
 # data = as.data.frame(na.omit(df))
 
-write_csv(x = df, file = 'processed_data/data_jan30.csv', col_names = T)
+write_csv(x = df, file = 'processed_data/data_feb13.csv', col_names = T)
 
 
 
 ### FIGURE 1
 
-data <- read_csv('processed_data/data_jan30.csv', col_names = T)
+data <- read_csv('processed_data/data_feb13.csv', col_names = T)
 df.long <- read.csv("processed_data/cluster.csv")
 
 ## get model performance
@@ -64,7 +75,7 @@ for (idx in all.dne_all){
 
 info.df <- info.df %>%
   rename(nhdhr_id  = lake_id, fit_all = fit_tall)
-data <- merge(data, info.df, by = 'nhdhr_id')
+# data <- merge(data, info.df, by = 'nhdhr_id')
 
 mean_train = data %>%
   pull(fit_train) %>%

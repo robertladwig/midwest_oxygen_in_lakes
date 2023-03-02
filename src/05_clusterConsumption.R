@@ -36,23 +36,60 @@
                             'depth' = NULL,
                             'area' = NULL,
                             'evel' = NULL)
+        obs_df <- data.frame('lake' = NULL,
+                            'year' = NULL,
+                            'obs_epi' = NULL,
+                          'obs_hypo' = NULL,
+                          'obs_mixed' = NULL)
+        all_fits <- data.frame('lake' = NULL,
+                               'fit_train' = NULL,
+                               'fit_test' = NULL,
+                               'fit_all' =  NULL,
+                               'obs_total' = NULL)
+        raw_data <- data.frame('lake' = NULL,
+                               'year' = NULL,
+                               'datetime' = NULL,
+                               'obs_epi' = NULL,
+                               'obs_hyp' = NULL,
+                               'obs_tot' = NULL,
+                               'sim_epi' = NULL,
+                               'sim_hyp' = NULL,
+                               'sim_tot' = NULL,
+                               'sat_hypo' = NULL)
         for (i in lake.list){
           if (file.exists(paste0('metabolism_model/',i,'/modeled_o2.RData')) == FALSE){
             next
           }
           info <- read.csv(paste0('metabolism_model/',i,'/lakeinfo.txt'))
-          if (info$fit_tall > 3 ){ #fit_train, 5
-            next
-          }
+          
+          all_fits <- rbind(all_fits,  data.frame('lake' = i,
+                                                  'fit_train' = info$fit_train,
+                                                  'fit_test' = info$fit_test,
+                                                  'fit_all' =  info$fit_tall,
+                                                  'obs_total' = info$n_obs))
+          # if (info$fit_tall > 3 ){ #fit_train, 5
+          #   next
+          # }
           load(paste0('metabolism_model/',i,'/modeled_o2.RData'))# load('Allequash/Allequash.Rda')
           data <- o2$df_kgml
 
-          if (max(data$o2_hyp) > 20000 |  length(data$obs_hyp[!is.na(data$obs_hyp)]) < 5){
-                  next
-          }
+          # if (max(data$o2_hyp) > 20000 |  length(data$obs_hyp[!is.na(data$obs_hyp)]) < 5){
+          #         next
+          # }
 
           nml = glmtools::read_nml(paste0('inst/extdata/pball_nml/pball_nml_files/pball_',i,'.nml'))
-
+          
+          raw_data <- rbind(raw_data, data.frame('lake' = i,
+                     'year' = data$year,
+                     'datetime' = data$datetime,
+                     'obs_epi' = data$obs_epi,
+                     'obs_hyp' = data$obs_hyp,
+                     'obs_tot' = data$obs_tot,
+                     'sim_epi' = data$o2_epi,
+                     'sim_hyp' = data$o2_hyp,
+                     'sim_tot' = data$o2_tot,
+                     'sat_hypo' = o2.at.sat.base(temp = data$temperature_hypo , altitude = max(nml$morphometry$H)) * 1000))
+          
           morph <- rbind(morph, data.frame('lake'=i,
                                            'depth'=mean(data$max.d),
                                            'area' = mean(data$area_surface),
@@ -64,19 +101,26 @@
             if ((max(dataStrat$doy) - min(dataStrat$doy)) <2){
               next
             }
+            
+            obs_df <- rbind(obs_df, data.frame('lake'=i,
+                                             'year'= an,
+                                             'obs_epi' = sum(!is.na(dataAnn$obs_epi)),
+                                             'obs_hypo' = sum(!is.na(dataAnn$obs_hyp)),
+                                             'obs_mixed' = sum(!is.na(dataAnn$obs_tot))))
+            
             dataStrat$Sat_hypo <- o2.at.sat.base(temp = dataStrat$temperature_hypo , altitude = max(nml$morphometry$H)) * 1000
             dataStrat$dist <- (dataStrat$doy - min(dataStrat$doy)) / (max(dataStrat$doy) - min(dataStrat$doy))
-            dataStrat$normalDO <- dataStrat$o2_hyp / dataStrat$Sat_hypo
-            scaledDOdiff <- approx(dataStrat$dist, dataStrat$normalDO , seq(0,1,0.01))
+            dataStrat$normalDO <- dataStrat$o2_hyp #/ dataStrat$Sat_hypo
+            scaledDOdiff <- approx(dataStrat$dist, dataStrat$normalDO , seq(0,1,0.05))
 
-            if (max(scaledDOdiff$y) > 2){
-                    print(i)
-                    print(dataStrat$normalDO )
-                    print(dataStrat$o2_hyp)
-                    print(dataStrat$Sat_hypo)
-                    print(scaledDOdiff$y)
-                    readline(prompt="Press [enter] to continue")
-            }
+            # if (max(scaledDOdiff$y) > 2){
+            #         print(i)
+            #         print(dataStrat$normalDO )
+            #         print(dataStrat$o2_hyp)
+            #         print(dataStrat$Sat_hypo)
+            #         print(scaledDOdiff$y)
+            #         readline(prompt="Press [enter] to continue")
+            # }
 
             anoxDym[[a]] = scaledDOdiff$y
             a=a+1
@@ -84,7 +128,7 @@
           }
         }
 
-        anoxDym2 = lapply(anoxDym,rollmean,k = 10)
+        anoxDym2 = lapply(anoxDym,rollmean,k = 5)
 
         mydata = (as.matrix(as.data.frame(anoxDym2)))
         wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
@@ -132,7 +176,7 @@
           dataGroups_var[[i]] = apply(data.df,1, sd)
 
           data.long = data.df %>%
-            mutate(x = 1:92) %>%
+            mutate(x = 1:17) %>% #92
             pivot_longer(-x)
 
           # Individual Cluster Plots
@@ -255,6 +299,9 @@
         write_csv(x = df.long, file = 'processed_data/cluster.csv', col_names = T)
         write_csv(x = df.lower, file = 'processed_data/cluster_lower.csv', col_names = T)
         write_csv(x = df.upper, file = 'processed_data/cluster_upper.csv', col_names = T)
+        write_csv(x = obs_df, file = 'processed_data/observed_data.csv', col_names = T)
+        write_csv(x = all_fits, file = 'processed_data/performance.csv', col_names = T)
+        write_csv(x = raw_data, file = 'processed_data/raw_data.csv', col_names = T)
         
         
         # 

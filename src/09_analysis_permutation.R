@@ -30,7 +30,7 @@ library(pROC)
 library(multiROC)
 
 
-data <- read_csv( 'processed_data/data_jan30.csv', col_names = T)
+data <- read_csv( 'processed_data/data_feb13.csv', col_names = T)
 
 
 
@@ -76,7 +76,7 @@ data <- data[-idx, ]
 
 
 data_new <- data %>%
-  mutate(Osgood = Depth_avg/ sqrt(area)) %>%
+  mutate(Osgood = Depth_avg/ sqrt(area/1e6)) %>%
   mutate(ct = as.numeric(as.factor(data$ct)) - 1,
          depth = log10(depth),
          RT = log10(Res_time),
