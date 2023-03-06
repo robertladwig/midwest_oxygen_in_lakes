@@ -63,18 +63,49 @@ if (nrow(wtr.data) != 0){
   
   
   
-  dbDisconnect(con)
+
   
   if (nrow(data_pull_variable) != 0){
 
   ###
   dbDisconnect(con)
+    
+    
+    depth_unit <- which(data_pull_variable$ActivityDepthHeightMeasure.MeasureUnitCode != 'm')
+    to_remove_depth_unit = c()
+    for (depth_iter in depth_unit){
+      # if (data_pull_variable$ActivityDepthHeightMeasure.MeasureUnitCode[depth_iter] == ''){
+      #   to_remove_depth_unit = append(to_remove_depth_unit, depth_iter) }
+      if (data_pull_variable$ActivityDepthHeightMeasure.MeasureUnitCode[depth_iter] == 'ft'){
+        data_pull_variable$ResultDepthHeightMeasure.MeasureValue[depth_iter] = 
+          data_pull_variable$ResultDepthHeightMeasure.MeasureValue[depth_iter] * 0.3048
+      }  else if (data_pull_variable$ActivityDepthHeightMeasure.MeasureUnitCode[depth_iter] == 'cm'){
+        data_pull_variable$ResultDepthHeightMeasure.MeasureValue[depth_iter] = 
+          data_pull_variable$ResultDepthHeightMeasure.MeasureValue[depth_iter] / 100
+      }
+    }
+    
+    eg_nml <- read_nml(paste0('inst/extdata/pball_nml/pball_nml_files/pball_',lake_id,'.nml'))
+    H <- abs(eg_nml$morphometry$H - max(eg_nml$morphometry$H)) # DEPTH
+    to_remove_depth_high <- which(data_pull_variable$ActivityDepthHeightMeasure.MeasureValue > max(H))
+    
+    
+    to_remove_do_unit <- which(data_pull_variable$ResultMeasure.MeasureUnitCode != 'mg/l' & 
+                                 data_pull_variable$ResultMeasure.MeasureUnitCode != 'g/m3' & 
+                                 data_pull_variable$ResultMeasure.MeasureUnitCode != 'ppm')
+    
+    to_remove_all <- unique(c(to_remove_depth_high, to_remove_do_unit,to_remove_depth_unit))
+    if (length(to_remove_all) != 0){
+      wq_data = data_pull_variable[-to_remove_all,]
+    } else {
+      wq_data = data_pull_variable
+    }
+    obs     <- NULL
 
   data = wtr.data
   meteo = meteo.data
 
-  wq_data = data_pull_variable
-  obs     <- NULL
+
 
   raw_obs = wq_data
   if ('ActivityDepthHeighMeasure.MeasureValue' %in% colnames(raw_obs)){
@@ -127,11 +158,14 @@ if (nrow(wtr.data) != 0){
     }
 
     # outlier detection
-    if (length(unique(obs$ActivityStartDate)) > 10){
-      outlier_values              <- boxplot.stats(obs$ResultMeasureValue)$out
-      uvx                         <- match(outlier_values, obs$ResultMeasureValue)
-      obs$ResultMeasureValue[uvx] <- NA
-    }
+  # outlier detection
+  # if (length(unique(obs$ActivityStartDate)) > 10){
+  outlier_values              <- which(obs$ResultMeasureValue > 25)
+  #boxplot.stats(obs$ResultMeasureValue)$out
+  # uvx                         <- match(outlier_values, obs$ResultMeasureValue)
+  if (length(outlier_values) != 0){
+    obs <- obs[-outlier_values,]
+  }
     
     # remove duplicated rows
     id_duplicated <- !duplicated(obs)
