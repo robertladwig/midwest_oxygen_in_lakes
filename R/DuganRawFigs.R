@@ -44,7 +44,7 @@ for (i in 1:length(lakenames)){
     # scale_y_reverse(limits = c(20,0)) +
     scale_y_reverse() +
     xlab('o2 (mg/L)') + ylab('Depth(m)') +
-    xlim(0,20) +
+    # xlim(0,20) +
     # labs(title = paste0('cluster = ', ct$cluster)) +
     labs(title = paste0(ct$fit,': ', ct$nhdhr_id)) +
     theme_bw(base_size = 7)

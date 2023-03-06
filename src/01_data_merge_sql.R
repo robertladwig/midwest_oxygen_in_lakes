@@ -61,6 +61,8 @@ if (nrow(wtr.data) != 0){
     arrange(ActivityStartDate) %>%
     mutate(CharacteristicName = 'Dissolved oxygen (DO)')
   
+  
+  
   dbDisconnect(con)
   
   if (nrow(data_pull_variable) != 0){
