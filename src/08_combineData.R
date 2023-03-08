@@ -1,12 +1,13 @@
 library(odem.data)
 
-# setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
-setwd("/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes")
+setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
+# setwd("/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes")
 
 library(tidyverse)
 library(sf)
+library(patchwork)
 
-consumption <- read.csv('processed_data/consumptiontype_jan30.csv') %>%
+consumption <- read.csv('processed_data/consumptiontype_mar8.csv') %>%
   rename(nhdhr_id = lake)
 str(consumption)
 observed_datapoints <- read.csv('processed_data/observed_data.csv')  %>%
@@ -59,14 +60,16 @@ nrow(df)
 nrow(as.data.frame(na.omit(df)))
 # data = as.data.frame(na.omit(df))
 
-write_csv(x = df, file = 'processed_data/data_feb13.csv', col_names = T)
+write_csv(x = df, file = 'processed_data/data_mar8.csv', col_names = T)
 
 
 
 ### FIGURE 1
 
-data <- read_csv('processed_data/data_feb13.csv', col_names = T)
+data <- read_csv('processed_data/data_mar8.csv', col_names = T)
 df.long <- read.csv("processed_data/cluster.csv")
+df.upper <- read.csv("processed_data/cluster_upper.csv")
+df.lower <- read.csv("processed_data/cluster_lower.csv")
 
 ## get model performance
 all.dne <- list.files('metabolism_model//')
@@ -85,7 +88,7 @@ info.df <- info.df %>%
 
 mean_train = data %>%
   pull(fit_train) %>%
-  mean() %>%
+  mean(na.rm = T) %>%
   signif(3)
 
 mean_test = data %>%
@@ -113,8 +116,11 @@ plot1 <- ggplot(data) +
   theme_minimal(base_size = 15) +
   xlab('RMSE (g m-3)') + ylab('Density')
 
+cluster.labels <-  c("Heavy consumption", "Low consumption")
 plot4 <- ggplot(df.long) +
   geom_line(aes(depth, value, color = name), size = 1.5) +
+  geom_line(data = df.upper, aes(depth, value, color = name), linetype = 'dashed') +
+  geom_line(data = df.lower, aes(depth, value, color = name), linetype = 'dashed') +
   scale_color_manual(values = c('red4','lightblue1','gold','red1','red4'), name = 'Cluster',
                      labels = cluster.labels) +
   xlab('Stratification duration [%]') +
