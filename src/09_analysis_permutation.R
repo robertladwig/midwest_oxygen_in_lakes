@@ -1,7 +1,7 @@
 library(odem.data)
 
-setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
-
+# setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
+setwd("/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes")
 library(MuMIn)
 library(broom)
 library(parallel)
@@ -30,7 +30,7 @@ library(pROC)
 library(multiROC)
 
 
-data <- read_csv( 'processed_data/data_feb13.csv', col_names = T)
+data <- read_csv( 'processed_data/data_mar8.csv', col_names = T)
 
 
 
@@ -76,28 +76,39 @@ data <- data[-idx, ]
 
 
 data_new <- data %>%
-  mutate(Osgood = Depth_avg/ sqrt(area/1e6)) %>%
+  mutate(Osgood = Depth_avg/ sqrt(area/1e6),
+         AF = ifelse(is.infinite(AF), NA, AF)) %>%
   mutate(ct = as.numeric(as.factor(data$ct)) - 1,
          depth = log10(depth),
          RT = log10(Res_time),
          WshA = (Wshd_area),
          area = log10(area),
          Dis_avg = log10(Dis_avg),
-         Depth_avg = log10(Depth_avg)) %>%
+         Depth_avg = log10(Depth_avg),
+         Anoxia = log10(AF+1e-10)) %>%
   select(ct, human_impact, area ,depth,
-            eutro ,RT, oligo, Dis_avg, Depth_avg, dys, forest_impact,Osgood)
+            eutro ,RT, oligo, Dis_avg, Depth_avg, dys, forest_impact,Osgood, Anoxia)
 data_new <- na.omit(data_new)
 
 
 data_plot <- data %>%
-  mutate(Osgood = Depth_avg/ sqrt(area)) %>%
+  mutate(Osgood = Depth_avg/ sqrt(area),
+         AF = ifelse(is.infinite(AF), NA, AF)) %>%
   mutate(ct = as.numeric(as.factor(data$ct)) - 1,
          area = log10(area),
          depth = log10(depth),
          RT = log10(Res_time),
          WshA = log10(Wshd_area),
-         ct = ifelse(ct == 0, 'High consumption', 'Low consumption'))
+         ct = ifelse(ct == 0, 'High consumption', 'Low consumption'),
+         Anoxia = log10(AF+1e-10))
 data_melt <- reshape2::melt(data_plot, id = 'ct')
+
+anoxic_plot <- ggplot(data_plot) +
+  geom_density(aes(Anoxia,  fill = ct, group = ct), alpha = 0.3) +
+  scale_fill_manual(values = c('red4','lightblue1'), name = 'Cluster') +
+  xlab('Pseudo-Anoxic factor') +
+  ylab('Density') +
+  theme_minimal(base_size = 15)
 
 landuse_plot <- ggplot(data_plot) +
   geom_density(aes(human_impact,  fill = ct, group = ct), alpha = 0.3) +
@@ -176,8 +187,15 @@ fig2 <- landuse_plot +depth_plot +eutro_plot + dys_plot +oligo_plot +RT_plot +
 
 ggsave(file = 'figs/Figure2.png', fig2,  dpi = 600, width =13, height = 8)
 
+glm.redefined = function(formula, data, always="", ...) {
+  glm(as.formula(paste(deparse(formula), always)), data=data, ...)
+}
+models_exhaust <- glmulti(Anoxia ~ human_impact  + (depth) + eutro + oligo + dys +Dis_avg+
+                            RT + forest_impact + Osgood, # eutro + oligo + dys+ 
+                          data   = data_new,
+                          level  = 1)   # Keep 100 best models
 
-models_exhaust <- glmulti(ct ~ human_impact  + (depth) +
+models_exhaust <- glmulti(ct ~ human_impact  + (depth) + eutro + oligo + dys +Dis_avg+ Anoxia +
            RT + forest_impact + Osgood, # eutro + oligo + dys+ 
         data   = data_new,
         # crit   = aicc,       # AICC corrected AIC for small samples
@@ -199,7 +217,7 @@ plot(models_exhaust)
 plot(models_exhaust, type = "s")
 
 
-model_averaged <- model.avg(object = models_exhaust@objects[c(1:2)])
+model_averaged <- model.avg(object = models_exhaust@objects[c(1:4)])
 # model_averaged <- models_exhaust@objects[c(1)]
 
 # predicted data
@@ -304,10 +322,17 @@ create_figure4 <- function(group_ct, label_ct, title_ct){
     ylab('Density') +
     theme_minimal(base_size = 15)
   
+  anoxia_plot_flag <- ggplot(data_new %>% filter(ct == group_ct)) +
+    geom_histogram(aes(Anoxia, fill = flag, group = flag), alpha = 0.3, position="identity") +
+    scale_fill_manual(values = c("#00AFBB", "#E7B800"), name = '') +
+    xlab('Pseudo-anoxia probability') +
+    ylab('Density') +
+    theme_minimal(base_size = 15)
+  
   #Dis_avg+ Depth_avg+ dys+ forest_impact
   
   fig4 <- landuse_plot_flag  +depth_plot_flag +eutro_plot_flag+ oligo_plot_flag + dys_plot_flag +
-    RT_plot_flag  + forest_plot_flag+ osgood_plot_flag +
+    RT_plot_flag  + forest_plot_flag+ osgood_plot_flag +anoxia_plot_flag+
     plot_layout(guides = 'collect')  +
     plot_annotation(tag_levels = 'A', title = title_ct) & theme(legend.position = 'bottom')
   ggsave(file = paste0('figs/',label_ct), fig4,  dpi = 600, width =13, height = 8)

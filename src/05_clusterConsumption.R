@@ -115,7 +115,7 @@
             
             all.na.o2 = which(dataStrat$o2_hyp/1000 <= 1)
             
-            af.year = sum(dataStrat$volume_hypo[all.na.o2]) / ((max.dat - min.dat) * max(dataAnn$volume_total))
+            af.year = sum(dataStrat$volume_hypo[all.na.o2]) / ((max.dat - min.dat +1) * max(dataAnn$volume_total))
             
             af_data <- rbind(af_data, data.frame('lake' = i,
                                   'year' = an,
