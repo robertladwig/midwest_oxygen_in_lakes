@@ -1,7 +1,7 @@
 library(odem.data)
 
-# setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
-setwd("/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes")
+setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
+# setwd("/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes")
 library(MuMIn)
 library(broom)
 library(parallel)
@@ -86,7 +86,7 @@ data_new <- data %>%
          Dis_avg = log10(Dis_avg),
          Depth_avg = log10(Depth_avg),
          Anoxia = log10(AF+1e-10)) %>%
-  select(ct, human_impact, area ,depth,
+  dplyr::select(ct, human_impact, area ,depth,
             eutro ,RT, oligo, Dis_avg, Depth_avg, dys, forest_impact,Osgood, Anoxia)
 data_new <- na.omit(data_new)
 
@@ -182,7 +182,7 @@ osgood_plot <- ggplot(data_plot) +
   theme_minimal(base_size = 15)
 
 fig2 <- landuse_plot +depth_plot +eutro_plot + dys_plot +oligo_plot +RT_plot + 
-  forest_plot + osgood_plot + plot_layout(guides = 'collect')  +
+  forest_plot + osgood_plot + anoxic_plot +plot_layout(guides = 'collect')  +
   plot_annotation(tag_levels = 'A') & theme(legend.position = 'bottom')
 
 ggsave(file = 'figs/Figure2.png', fig2,  dpi = 600, width =13, height = 8)
@@ -195,7 +195,7 @@ models_exhaust <- glmulti(Anoxia ~ human_impact  + (depth) + eutro + oligo + dys
                           data   = data_new,
                           level  = 1)   # Keep 100 best models
 
-models_exhaust <- glmulti(ct ~ human_impact  + (depth) + eutro + oligo + dys +Dis_avg+ Anoxia +
+models_exhaust <- glmulti(ct ~ human_impact  + (depth) + eutro + oligo + dys +Dis_avg  +
            RT + forest_impact + Osgood, # eutro + oligo + dys+ 
         data   = data_new,
         # crit   = aicc,       # AICC corrected AIC for small samples

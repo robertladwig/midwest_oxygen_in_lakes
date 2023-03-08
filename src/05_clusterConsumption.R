@@ -1,7 +1,7 @@
         library(odem.data)
 
-        # setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
-        setwd("/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes")
+        setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
+        # setwd("/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes")
 
         if (!exists("password")){
           password <- as.character(read.delim('sensitive/password.txt', header = FALSE, stringsAsFactor = FALSE))
@@ -115,7 +115,7 @@
             
             all.na.o2 = which(dataStrat$o2_hyp/1000 <= 1)
             
-            af.year = sum(dataStrat$volume_hypo[all.na.o2]) / ((max.dat - min.dat +1) * max(dataAnn$volume_total))
+            af.year = sum(dataStrat$volume_hypo[all.na.o2]) / ( sum(dataStrat$volume_hypo)) #(max.dat - min.dat +1) 
             
             af_data <- rbind(af_data, data.frame('lake' = i,
                                   'year' = an,
