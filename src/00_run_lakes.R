@@ -1,5 +1,5 @@
-setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes')
-
+# setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes')
+setwd('/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes')
 source('R/helper.R')
 
 all.nml <- list.files('inst/extdata/pball_nml/pball_nml_files/')

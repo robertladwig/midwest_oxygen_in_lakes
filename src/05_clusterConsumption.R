@@ -1,7 +1,7 @@
         library(odem.data)
 
-        setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
-
+        # setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
+        setwd("/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes")
 
         if (!exists("password")){
           password <- as.character(read.delim('sensitive/password.txt', header = FALSE, stringsAsFactor = FALSE))
@@ -56,6 +56,9 @@
                                'sim_hyp' = NULL,
                                'sim_tot' = NULL,
                                'sat_hypo' = NULL)
+        af_data <- data.frame('lake' = NULL,
+                               'year' = NULL,
+                               'AF' = NULL)
         for (i in lake.list){
           if (file.exists(paste0('metabolism_model/',i,'/modeled_o2.RData')) == FALSE){
             next
@@ -67,11 +70,12 @@
                                                   'fit_test' = info$fit_test,
                                                   'fit_all' =  info$fit_tall,
                                                   'obs_total' = info$n_obs))
-          # if (info$fit_tall > 3 ){ #fit_train, 5
-          #   next
-          # }
           load(paste0('metabolism_model/',i,'/modeled_o2.RData'))# load('Allequash/Allequash.Rda')
           data <- o2$df_kgml
+          if (info$fit_tall > 3 |  length(data$obs_hyp[!is.na(data$obs_hyp)]) < 5 ){ #fit_train, 5
+            next
+          }
+          
 
           # if (max(data$o2_hyp) > 20000 |  length(data$obs_hyp[!is.na(data$obs_hyp)]) < 5){
           #         next
@@ -97,7 +101,26 @@
 
           for (an in unique(data$year)){
             dataAnn = data[ which(data$year %in% an),]
-            dataStrat = dataAnn[which(dataAnn$strat == 1),]
+            
+            all.na = ifelse(dataAnn$strat == 1, 1, NA)
+            min.dat = which(!is.na(all.na))[1]
+            max.dat = max(which(!is.na(all.na)))
+            
+            if (length(which(dataAnn$strat == 1)) == 0){
+                    dataStrat= data[dataAnn$strat ==1,]
+            } else{
+                    dataStrat =dataAnn[min.dat:max.dat,]
+            }
+           
+            
+            all.na.o2 = which(dataStrat$o2_hyp/1000 <= 1)
+            
+            af.year = sum(dataStrat$volume_hypo[all.na.o2]) / ((max.dat - min.dat) * max(dataAnn$volume_total))
+            
+            af_data <- rbind(af_data, data.frame('lake' = i,
+                                  'year' = an,
+                                  'AF' = af.year))
+            
             if ((max(dataStrat$doy) - min(dataStrat$doy)) <2){
               next
             }
@@ -294,7 +317,7 @@
           rename(year = variable) %>%
           summarize(ct = names(which.max(table(type)))) # constant convex linear
         
-        write_csv(x = types, file = 'processed_data/consumptiontype_jan30.csv', col_names = T)
+        write_csv(x = types, file = 'processed_data/consumptiontype_mar8.csv', col_names = T)
         write_csv(x = morph, file = 'processed_data/morphometry.csv', col_names = T)
         write_csv(x = df.long, file = 'processed_data/cluster.csv', col_names = T)
         write_csv(x = df.lower, file = 'processed_data/cluster_lower.csv', col_names = T)
@@ -302,6 +325,7 @@
         write_csv(x = obs_df, file = 'processed_data/observed_data.csv', col_names = T)
         write_csv(x = all_fits, file = 'processed_data/performance.csv', col_names = T)
         write_csv(x = raw_data, file = 'processed_data/raw_data.csv', col_names = T)
+        write_csv(x = af_data, file = 'processed_data/af_data.csv', col_names = T)
         
         
         # 

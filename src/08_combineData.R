@@ -1,6 +1,7 @@
 library(odem.data)
 
-setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
+# setwd('C:/Users/ladwi/Documents/Projects/R/midwest_oxygen_in_lakes/')
+setwd("/Users/robertladwig/Documents/DSI/midwest_oxygen_in_lakes")
 
 library(tidyverse)
 library(sf)
@@ -11,6 +12,8 @@ str(consumption)
 observed_datapoints <- read.csv('processed_data/observed_data.csv')  %>%
   rename(nhdhr_id = lake)
 modeled_performance <- read.csv('processed_data/performance.csv')  %>%
+  rename(nhdhr_id = lake)
+af_data <-  read.csv('processed_data/af_data.csv')  %>%
   rename(nhdhr_id = lake)
 
 landuse <- read.csv('processed_data/landuse.csv') %>%
@@ -31,8 +34,10 @@ df <- merge(df_conTro_landuse_morph, hydLakes, by = c('Hylak_id'), all = T)
 df01 = consumption %>%
   full_join(observed_datapoints, by = c('nhdhr_id', 'year'))
 df02 = df01 %>%
+  full_join(af_data, by = c('nhdhr_id', 'year'))
+df03 = df02 %>%
   full_join(modeled_performance, by = c('nhdhr_id'))
-df1 = df02 %>%
+df1 = df03 %>%
   full_join(trophic, by = c('nhdhr_id', 'year'))
 df2 = df1 %>%
   full_join(landuse, by = c('nhdhr_id', 'year'))
@@ -42,6 +47,7 @@ df4 = df3 %>%
   inner_join(hydLakes, by = c('Hylak_id'))
 nrow(df01)
 nrow(df02)
+nrow(df03)
 nrow(df1)
 nrow(df2)
 nrow(df3)

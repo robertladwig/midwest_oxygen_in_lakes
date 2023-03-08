@@ -1,6 +1,6 @@
 library(odem.data)
 
-setwd('~/Documents/DSI/odem.data/')
+setwd('~/Documents/DSI/midwest_oxygen_in_lakes//')
 
 all.nml <- list.files('inst/extdata/pball_nml/pball_nml_files/')
 all.nml_short <- sub(".*pball_", "", all.nml)
@@ -10,16 +10,16 @@ library(parallel)
 library(MASS)
 
 if (!exists("password")){
-  password <- as.character(read.delim('analysis/scripts/password.txt', header = FALSE, stringsAsFactor = FALSE))
+  password <- as.character(read.delim('sensitive/password.txt', header = FALSE, stringsAsFactor = FALSE))
 }
 
-all.dne <- list.files('analysis/')
+all.dne <- list.files('metabolism_model//')
 all.dne_all <- all.dne[grepl('nhdhr', all.dne)]
 
 info.df <- c()
 for (idx in all.dne_all){
-  if (file.exists(paste0('analysis/',idx,'/lakeinfo.txt'))){
-    info.df <- rbind(info.df,read.csv(paste0('analysis/',idx,'/lakeinfo.txt')))
+  if (file.exists(paste0('metabolism_model/',idx,'/lakeinfo.txt'))){
+    info.df <- rbind(info.df,read.csv(paste0('metabolism_model/',idx,'/lakeinfo.txt')))
   }
 }
 
@@ -33,19 +33,55 @@ for (idx in all.dne_all){
 # }
 
 
+library(tidyverse)
 library(ggplot2)
 library(RColorBrewer)
 library(patchwork)
+ 
+ info.df <- info.df %>%
+   rename(nhdhr_id  = lake_id, fit_all = fit_tall)
+ # data <- merge(data, info.df, by = 'nhdhr_id')
+ 
+ mean_train = info.df %>%
+   pull(fit_train) %>%
+   mean() %>%
+   signif(3)
+ 
+ mean_test = info.df %>%
+   pull(fit_test) %>%
+   mean(na.rm = T) %>%
+   signif(3)
+ 
+ mean_all = info.df %>%
+   pull(fit_all) %>%
+   mean(na.rm = T) %>%
+   signif(3)
+ 
+ plot1 <- ggplot(info.df) +
+   geom_density(aes(x = fit_train, fill = '1_Calibration'), alpha = 0.3) +
+   geom_density(aes(x = fit_test, fill = '2_Validation'), alpha = 0.3) +
+   geom_density(aes(x = fit_all, fill = '3_Total'), alpha = 0.3) +
+   geom_vline(xintercept= mean_train, size=1., col = c("#00AFBB"), linetype = 'dashed') +
+   annotate(geom = 'text', x = 3, y = 0.6, label = paste0("Calibration: ",mean_train,
+                                                          '\nValidation: ',mean_test,
+                                                          '\nTotal: ',mean_all),
+            hjust = 0) +
+   geom_vline(xintercept= mean_test, size=1.,  col = c("#E7B800"), linetype = 'dashed') +
+   geom_vline(xintercept= mean_all, size=1.,  col = c("#FC4E07"), linetype = 'dashed') +
+   scale_fill_manual(values = c("#00AFBB", "#E7B800", "#FC4E07"), name = '') +
+   theme_minimal(base_size = 15) +
+   xlab('RMSE (g m-3)') + ylab('Density')
+ 
 
 g1 <- ggplot(info.df) +
-  geom_point(aes(fit_train, log10(area), col = depth, size = n_obs)) +
+  geom_density(aes(fit_train)) +
   scale_color_gradient(low = "blue", high = "red") +
   ylab('log10 Surface Area') + xlab("Training RMSE (70%)") +
   ggtitle(paste0('Mean RMSE: ', round(mean(info.df$fit_train),1), ' g/m3')) +
   theme_bw(); g1
 
 g2 <- ggplot(info.df) +
-  geom_point(aes(fit_test, log10(area), col = depth, size = n_obs)) +
+  geom_density(aes(fit_test)) +
   scale_color_gradient(low = "blue", high = "red") +
   ylab('log10 Surface Area') + xlab("Testing RMSE (30%)") +
   ggtitle(paste0('Mean RMSE: ', round(mean(info.df$fit_test, na.rm = T),1), ' g/m3')) +
